@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+    <script type="text/javascript" src="http://www.json.org/json2.js"></script>
+    <script type="text/javascript">
+  $(document).ready(function() {
+    return window.ws = new WebSocket("ws://{{wshostname}}:{{wsport}}/");
+  });
+
+  ws.onopen = function() {
+    return console.log("open");
+  };
+
+  ws.onmessage = function(e) {
+    return console.log(e.data);
+  };
+
+  ws.onclose = function(e) {
+    return console.log("closed websocket connection");
+  };
+
+  ws.onerror = function(e) {
+    return console.log("error with websocket connection" + e);
+  };
+
+  ws.sendform = function() {
+    var myform = $(document.wsinputform);
+    var json_form_data = JSON.stringify(myform.serializeArray());
+    console.log("sending " + json_form_data);
+    ws.send(json_form_data);
+  }
+
+    </script>
+    <title></title>
+</head>
+<body>
+
+Input values for websocket service ws://{{wshostname}}:{{wsport}}
+<form name="wsinputform">
+    {% for key, value in arguments.items() %}{{key}} <input type="text" name="{{key}}" value="{{value}}">
+    {% end %}
+
+    <button onclick="window.ws.sendform">Submit</button>
+</form>
+
+
+
+</body>
+</html>
