@@ -8,7 +8,7 @@
         $(document).ready(function () {
             if ("WebSocket" in window) {
                 console.log("0");
-                var foo = new WebSocket("ws://{{wshostname}}:{{wsport}}");
+                var foo = new WebSocket("ws://{{wshostname}}:{{wsport}}/");
                 console.log("0b");
                 window.ws = foo;
 
@@ -20,6 +20,7 @@
 
                 window.ws.onmessage = function (e) {
                     console.log("2");
+                    alert(e.data);
                     return console.log(e.data);
                 };
 
@@ -45,7 +46,7 @@
                 $("#mybutton").click(window.ws.sendform);
 
             } else {
-                alert("no websocket!");
+                window.alert("no websocket!");
             }
 
         });

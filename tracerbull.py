@@ -13,17 +13,20 @@ import tornado.httpserver
 from multiprocessing import Process, Queue
 import socket
 import os
-
+import tempfile
+import imp
+import imputil
+import sys
 
 # https://github.com/facebook/tornado/blob/master/tornado/netutil.py
 services = [
-    {"servicename":"defaultservicename",
-     "arguments":{"arg0":"defaultvalarg0", "arg1":"defaultvalarg1"},
-     "uri":"http://suggest.atbrox.com",
+    {"servicename":"suggestservice",
+     "arguments":{"arg0":"default0", "arg1":"default1"},
+     "hostname":"box1.atbrox.com",
      "response":{},
-     "protocols":["http", "websocket"],
-     "num_instances":7,
-     "num_replicas":1}, # add default way of handling, e.g. merge, just respond, conversions etc?
+     "protocols":["websocket"],
+     "num_instances":1,
+     "num_replicas":0}, # add default way of handling, e.g. merge, just respond, conversions etc?
 ]
 
 def generate_code(service, template_filename, loader=template.Loader(".")):
@@ -73,10 +76,11 @@ def create_application_class(service):
 def create_process(port, queue, boot_function, application, name, instance_number):
     p = Process(target=boot_function, args=(queue, port, application, name, instance_number))
     p.start()
-
     return p
 
-def start_http_server(queue, port, application, name, instance_number):
+
+# either http server or websocket
+def start_application_server(queue, port, application, name, instance_number):
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(port)
     actual_port = port
@@ -93,6 +97,14 @@ def start_http_server(queue, port, application, name, instance_number):
     queue.put(info)
     tornado.ioloop.IOLoop.instance().start()
 
+def import_generated_code(generated_code):
+    fh = tempfile.NamedTemporaryFile(mode='w')
+    fh.write(generated_code)
+    fh.flush() # to make it readable with load_source
+    my_mod_name = fh.name.split('/')[-1]
+    my_mod = imp.load_source(my_mod_name, fh.name)
+    fh.close()
+    return my_mod
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -122,19 +134,39 @@ if __name__ == "__main__":
 #    print q.get()
 #    print q.get()
 
-    generated_code = generate_code(services[0], "http_server_template.tpl")
-    print "generated code\n", generated_code
+    #generated_code = generate_code(services[0], "http_server_template.tpl")
+    #print "generated code\n", generated_code
 
     generated_code = generate_code(services[0], "websocket_server_template.tpl")
-    print "generated code\n", generated_code
-    #p.join(timeout=100)
+    #print "generated code\n", generated_code
+
+    codemodule = import_generated_code(generated_code)
+    print dir(codemodule)
+    #sys.exit(0)
+    application = tornado.web.Application([
+        (r"/", getattr(codemodule, 'suggestservice_websocket'))
+    ])
+    print dir(application), type(application)
+    print type(application)
+    p = create_process(0, q, start_application_server, application, "myws", 0)
+    #start_application_server(q, 40761, application, "yodaapp", 0)
+    data = q.get()
+    #data = q.get()
+    print data
 
 
     y = services[0]
-    y["wshostname"] = "wsbox.atbrox.com"
-    y["wsport"] = "9333"
-    generated_code = generate_code(y, "wsclient.html")
+    y["wshostname"] = services[0]["hostname"]
+    y["wsport"] = str(data["port"])
+    print "Y = ", y
+    generated_code = generate_code(y, "websocket_client.tpl")
     print "generated code\n", generated_code
+    fh = tempfile.NamedTemporaryFile(mode='w')
+    fh.write(generated_code)
+    fh.flush()
+    print fh.name
+    print data
+    p.join()
 
 
-import tornado.websocket
+
