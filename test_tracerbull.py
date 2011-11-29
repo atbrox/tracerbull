@@ -65,29 +65,14 @@ class TestBabelShark:
                                                          "websocket_client.tpl",
                                                          loader=tornado.template.Loader(working_path))
         soup = bs4.BeautifulSoup(websocket_html_client_code)
-        print soup.prettify()
+
+        parser = pyjsparser.parser.Parser()
+        #print soup.prettify()
         javascripts = soup.find_all("script")
-        print len(javascripts), type(javascripts)
         for javascript in javascripts:
-            print type(javascript), dir(javascript)
             if 'function' in javascript.text:
-                #print javascript
-                print "###################"
-                lines = javascript.text.split("\n")
-                jslines = lines[1:-1]
-                try:
-                    from pyjsparser.parser import Parser
-                    input = "\n".join(lines)
-                    parser = Parser()
-                    program = parser.parse(input)
-                    print "pgora", program
-                    
-
-
-                except:
-                    traceback.print_exc()
-                print "@@@@@@@@@@@@@@@@@@"
-
+                program = parser.parse(javascript.text)
+                assert type(program) == pyjsparser.ast.Program
 
         
 
