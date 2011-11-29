@@ -166,6 +166,12 @@ if __name__ == "__main__":
     fh.flush()
     print fh.name
     print data
+
+
+    gc = generate_code(y, "websocket_cmdline_client.tpl")
+    print "gc = ", gc
+
+
     p.join()
 
 
