@@ -17,6 +17,7 @@ import tempfile
 import imp
 import imputil
 import sys
+import traceback
 
 # https://github.com/facebook/tornado/blob/master/tornado/netutil.py
 services = [
@@ -30,9 +31,14 @@ services = [
 ]
 
 def generate_code(service, template_filename, loader=template.Loader(".")):
+    print type(service)
+    print type(template_filename)
+    print type(loader)
     # need template for http and websocket
+    
     generated_code = loader.load(template_filename).generate(**service)
     return generated_code
+   
 
 def generate_host_entries(services):
     pass
@@ -105,6 +111,40 @@ def import_generated_code(generated_code):
     my_mod = imp.load_source(my_mod_name, fh.name)
     fh.close()
     return my_mod
+
+def start_services(services, codegen=generate_code,
+                   importcode=import_generated_code,
+                   tornadoapp =tornado.web.Application,
+                   forker=create_process,
+                   boot_function=start_application_server):
+
+    # loop through all services
+    # create hosts file
+    # update kill-file for them (processes)
+    # create all files (websocket server, and js/python client files)
+    host_file = {}
+    kill_file = {}
+    queue = Queue()
+    for service in services:
+        websocket_server_code = codegen(service, "websocket_server_template.tpl")
+        websocket_server_module = importcode(websocket_server_code)
+        websocket_server_class_name = "%s_websocket" % (service["servicename"])
+        websocket_server_application =  tornado.web.Application([
+                (r"/", getattr(codemodule, websocket_server_class_name))
+            ])
+        websocket_server_process = create_process(0, queue, boot_function,
+            websocket_server_application, service["servicename"], 0)
+
+    # the queue should now contain data about the service
+    # need to wait for port numbers for the client code
+    #websocket_html_client_code = generate_code(service, "websocket_client.tpl")
+    #websocket cmdline_client_code = generate_code(service, "websocket_cmdline_client.tpl")
+
+
+
+
+
+
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
