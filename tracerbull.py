@@ -108,6 +108,7 @@ class BabelShark(object):
             websocket_server_process = forker(0, queue, boot_function,
                 websocket_server_application, service["servicename"], 0)
             print websocket_server_process
+        print "yo"
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code
         #websocket_html_client_code = generate_code(service, "websocket_client.tpl")

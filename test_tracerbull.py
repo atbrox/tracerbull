@@ -1,5 +1,6 @@
 from mako import codegen
-from mockito.mockito import when
+from mockito.mockito import when, verify
+from mockito.spying import spy
 import tracerbull
 import tornado
 
@@ -36,8 +37,9 @@ class TestStartServices:
     def test_start_services(self):
         when(tracerbull.BabelShark).create_process(any(),any(),any(),
                                             any(), any(),any()).thenReturn("ws_process")
-        services = [create_test_service()]
+        services = [create_test_service(), create_test_service()]
         working_path = "/home/amund/PycharmProjects/tracerbull"
+
         tracerbull.BabelShark.start_services(services,
                                              codegen=tracerbull.BabelShark.generate_code,
                                              importcode=tracerbull.BabelShark.import_generated_code,
@@ -45,6 +47,9 @@ class TestStartServices:
                                              boot_function=tracerbull.BabelShark.start_application_server,
                                              tornadoapp=tornado.web.Application,
                                              template_path=working_path)
+
+        verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
+                                                any(), any(),any())
 
 class TestCodeGeneration:
 
