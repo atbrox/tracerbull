@@ -30,121 +30,85 @@ services = [
      "num_replicas":0}, # add default way of handling, e.g. merge, just respond, conversions etc?
 ]
 
-def generate_code(service, template_filename, loader=template.Loader(".")):
-    print type(service)
-    print type(template_filename)
-    print type(loader)
-    # need template for http and websocket
-    
-    generated_code = loader.load(template_filename).generate(**service)
-    return generated_code
+class BabelShark(object):
+    @staticmethod
+    def generate_code(service, template_filename, loader=template.Loader(".")):
+        print type(service)
+        print type(template_filename)
+        print type(loader)
+        # need template for http and websocket
+
+        generated_code = loader.load(template_filename).generate(**service)
+        return generated_code
    
+    @staticmethod
+    def generate_host_entries(services):
+        pass
 
-def generate_host_entries(services):
-    pass
-
-
-# ref: http://www.pythonexamples.org/2011/01/12/how-to-dynamically-create-a-class-at-runtime-in-python/
-def create_application_class(service):
-    assert type(service) == dict
-    assert(service.has_key("servicename"))
-    assert(service.has_key("arguments"))
-    arguments = service["arguments"]
-    # TODO: use tornado templates below
-    response = "{"
-    for argument in arguments:
-        print argument
-        response += "\"%s\"" % (argument)
-        response += ": self.get_argument("
-        response += "\"%s\"" % (argument)
-        response += ", "
-        response += "\"%s\"" % (arguments[argument])
-        response += "),"
-    #print service["servicename"]
-    response += '"service":"' + service["servicename"] + '"'
-    #resposne += "time"
-
-    response += "}"
-    print "response = ", response
-    #a = eval(response)
-    #print a
-#        response[argument] =
-    result = type(
-        service["servicename"], # class name
-        (tornado.web.RequestHandler,), # inherits from
-        dict(
-            get = lambda self:self.write(response)
-        )
-    )
-    return result
-#
-
-def create_process(port, queue, boot_function, application, name, instance_number):
-    p = Process(target=boot_function, args=(queue, port, application, name, instance_number))
-    p.start()
-    return p
+    @staticmethod
+    def create_process(port, queue, boot_function, application, name, instance_number):
+        p = Process(target=boot_function, args=(queue, port, application, name, instance_number))
+        p.start()
+        return p
 
 
-# either http server or websocket
-def start_application_server(queue, port, application, name, instance_number):
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(port)
-    actual_port = port
-    if port == 0: # special case, an available port is picked automatically
-        # only pick first! (for now)
-        assert len(http_server._sockets) > 0
-        for s in http_server._sockets:
-            actual_port = http_server._sockets[s].getsockname()[1]
-            break
-    pid = os.getpid()
-    ppid = os.getppid()
-    info = {"name":name, "instance_number": instance_number, "port":actual_port,
-            "pid":pid, "ppid": ppid }
-    queue.put(info)
-    tornado.ioloop.IOLoop.instance().start()
+    @staticmethod
+    # either http server or websocket
+    def start_application_server(queue, port, application, name, instance_number):
+        http_server = tornado.httpserver.HTTPServer(application)
+        http_server.listen(port)
+        actual_port = port
+        if port == 0: # special case, an available port is picked automatically
+            # only pick first! (for now)
+            assert len(http_server._sockets) > 0
+            for s in http_server._sockets:
+                actual_port = http_server._sockets[s].getsockname()[1]
+                break
+        pid = os.getpid()
+        ppid = os.getppid()
+        info = {"name":name, "instance_number": instance_number, "port":actual_port,
+                "pid":pid, "ppid": ppid }
+        queue.put(info)
+        tornado.ioloop.IOLoop.instance().start()
 
-def import_generated_code(generated_code):
-    fh = tempfile.NamedTemporaryFile(mode='w')
-    fh.write(generated_code)
-    fh.flush() # to make it readable with load_source
-    my_mod_name = fh.name.split('/')[-1]
-    my_mod = imp.load_source(my_mod_name, fh.name)
-    fh.close()
-    return my_mod
+    @staticmethod
+    def import_generated_code(generated_code):
+        fh = tempfile.NamedTemporaryFile(mode='w')
+        fh.write(generated_code)
+        fh.flush() # to make it readable with load_source
+        my_mod_name = fh.name.split('/')[-1]
+        my_mod = imp.load_source(my_mod_name, fh.name)
+        fh.close()
+        return my_mod
 
-def start_services(services, codegen=generate_code,
-                   importcode=import_generated_code,
-                   tornadoapp =tornado.web.Application,
-                   forker=create_process,
-                   boot_function=start_application_server):
+    @staticmethod
+    def start_services(services, codegen=generate_code,
+                       importcode=import_generated_code,
+                       tornadoapp =tornado.web.Application,
+                       forker=create_process,
+                       boot_function=start_application_server):
 
-    # loop through all services
-    # create hosts file
-    # update kill-file for them (processes)
-    # create all files (websocket server, and js/python client files)
-    host_file = {}
-    kill_file = {}
-    queue = Queue()
-    for service in services:
-        websocket_server_code = codegen(service, "websocket_server_template.tpl")
-        websocket_server_module = importcode(websocket_server_code)
-        websocket_server_class_name = "%s_websocket" % (service["servicename"])
-        websocket_server_application =  tornado.web.Application([
-                (r"/", getattr(codemodule, websocket_server_class_name))
-            ])
-        websocket_server_process = create_process(0, queue, boot_function,
-            websocket_server_application, service["servicename"], 0)
+        # loop through all services
+        # create hosts file
+        # update kill-file for them (processes)
+        # create all files (websocket server, and js/python client files)
+        host_file = {}
+        kill_file = {}
+        queue = Queue()
+        for service in services:
+            websocket_server_code = codegen(service, "websocket_server_template.tpl")
+            websocket_server_module = importcode(websocket_server_code)
+            websocket_server_class_name = "%s_websocket" % (service["servicename"])
+            websocket_server_application =  tornado.web.Application([
+                    (r"/", getattr(codemodule, websocket_server_class_name))
+                ])
+            websocket_server_process = create_process(0, queue, boot_function,
+                websocket_server_application, service["servicename"], 0)
 
-    # the queue should now contain data about the service
-    # need to wait for port numbers for the client code
-    #websocket_html_client_code = generate_code(service, "websocket_client.tpl")
-    #websocket cmdline_client_code = generate_code(service, "websocket_cmdline_client.tpl")
-
-
-
-
-
-
+        # the queue should now contain data about the service
+        # need to wait for port numbers for the client code
+        #websocket_html_client_code = generate_code(service, "websocket_client.tpl")
+        #websocket cmdline_client_code = generate_code(service, "websocket_cmdline_client.tpl")
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -152,35 +116,11 @@ class MainHandler(tornado.web.RequestHandler):
 
 if __name__ == "__main__":
     q = Queue()
-#    appclass = create_application_class(services[0])
-#    print type(appclass)
-#    application = tornado.web.Application([
-#           (r"/", appclass),
-#       ])
-#    print type(application)
-#    class foobar(appclass):
-#        def get(self):
-#            super(foobar, self).get()
-#            self.write("yoda")
-#
-#    application2 = tornado.web.Application([
-#             (r"/", foobar),
-#         ])
-#
-#    name = "yosa"
-#
-#    p = create_process(0, q, start_http_server, application, name, 0)
-#    p2 = create_process(0, q, start_http_server, application2, name + "yo", 0)
-#    print q.get()
-#    print q.get()
 
-    #generated_code = generate_code(services[0], "http_server_template.tpl")
+    generated_code = BabelShark.generate_code(services[0], "websocket_server_template.tpl")
     #print "generated code\n", generated_code
 
-    generated_code = generate_code(services[0], "websocket_server_template.tpl")
-    #print "generated code\n", generated_code
-
-    codemodule = import_generated_code(generated_code)
+    codemodule = BabelShark.import_generated_code(generated_code)
     print dir(codemodule)
     #sys.exit(0)
     application = tornado.web.Application([
@@ -188,7 +128,7 @@ if __name__ == "__main__":
     ])
     print dir(application), type(application)
     print type(application)
-    p = create_process(0, q, start_application_server, application, "myws", 0)
+    p = BabelShark.create_process(0, q, BabelShark.start_application_server, application, "myws", 0)
     #start_application_server(q, 40761, application, "yodaapp", 0)
     data = q.get()
     #data = q.get()
@@ -199,7 +139,7 @@ if __name__ == "__main__":
     y["wshostname"] = services[0]["hostname"]
     y["wsport"] = str(data["port"])
     print "Y = ", y
-    generated_code = generate_code(y, "websocket_client.tpl")
+    generated_code = BabelShark.generate_code(y, "websocket_client.tpl")
     print "generated code\n", generated_code
     fh = tempfile.NamedTemporaryFile(mode='w')
     fh.write(generated_code)
@@ -208,7 +148,7 @@ if __name__ == "__main__":
     print data
 
 
-    gc = generate_code(y, "websocket_cmdline_client.tpl")
+    gc = BabelShark.generate_code(y, "websocket_cmdline_client.tpl")
     print "gc = ", gc
 
 
