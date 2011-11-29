@@ -82,11 +82,13 @@ class BabelShark(object):
         return my_mod
 
     @staticmethod
-    def start_services(services, codegen=generate_code,
-                       importcode=import_generated_code,
-                       tornadoapp =tornado.web.Application,
-                       forker=create_process,
-                       boot_function=start_application_server):
+    def start_services(services,
+                       codegen,
+                       importcode,
+                       tornadoapp,
+                       forker,
+                       boot_function,
+                       template_path="."):
 
         # loop through all services
         # create hosts file
@@ -96,15 +98,16 @@ class BabelShark(object):
         kill_file = {}
         queue = Queue()
         for service in services:
-            websocket_server_code = codegen(service, "websocket_server_template.tpl")
+            websocket_server_code = codegen(service, "websocket_server_template.tpl",
+                                            loader=template.Loader(template_path))
             websocket_server_module = importcode(websocket_server_code)
             websocket_server_class_name = "%s_websocket" % (service["servicename"])
-            websocket_server_application =  tornado.web.Application([
-                    (r"/", getattr(codemodule, websocket_server_class_name))
+            websocket_server_application =  tornadoapp([
+                    (r"/", getattr(websocket_server_module, websocket_server_class_name))
                 ])
-            websocket_server_process = create_process(0, queue, boot_function,
+            websocket_server_process = forker(0, queue, boot_function,
                 websocket_server_application, service["servicename"], 0)
-
+            print websocket_server_process
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code
         #websocket_html_client_code = generate_code(service, "websocket_client.tpl")

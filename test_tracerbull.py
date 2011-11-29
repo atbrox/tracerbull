@@ -7,6 +7,9 @@ import pytest
 import mockito
 import mockito_test
 import mockito_util
+
+from mockito import any
+
 import random
 import traceback
 
@@ -19,25 +22,35 @@ import pyjsparser
 # hg clone  https://bitbucket.org/outcomm/bs4
 # hg clone https://bitbucket.org/nullie/pyjsparser
 
+def create_test_service():
+    test_service = {"servicename": "suggestservice", "arguments": {"arg0": "default0", "arg1": "default1"},
+                    "hostname": "box1.atbrox.com",
+                    "response": {},
+                    "protocols": ["websocket"],
+                    "num_instances": 1,
+                    "num_replicas": 0}
+    return test_service
+
 
 class TestStartServices:
     def test_start_services(self):
-        pass
-
-
+        when(tracerbull.BabelShark).create_process(any(),any(),any(),
+                                            any(), any(),any()).thenReturn("ws_process")
+        services = [create_test_service()]
+        working_path = "/home/amund/PycharmProjects/tracerbull"
+        tracerbull.BabelShark.start_services(services,
+                                             codegen=tracerbull.BabelShark.generate_code,
+                                             importcode=tracerbull.BabelShark.import_generated_code,
+                                             forker=tracerbull.BabelShark.create_process,
+                                             boot_function=tracerbull.BabelShark.start_application_server,
+                                             tornadoapp=tornado.web.Application,
+                                             template_path=working_path)
 
 class TestCodeGeneration:
-    def _create_test_service(self):
-        test_service = {"servicename": "suggestservice", "arguments": {"arg0": "default0", "arg1": "default1"},
-                        "hostname": "box1.atbrox.com",
-                        "response": {},
-                        "protocols": ["websocket"],
-                        "num_instances": 1,
-                        "num_replicas": 0}
-        return test_service
+
 
     def test_generate_server_code(self):
-        test_service = self._create_test_service()
+        test_service = create_test_service()
         working_path = "/home/amund/PycharmProjects/tracerbull"
         websocket_server_code = tracerbull.BabelShark.generate_code(test_service,
                                                          "websocket_server_template.tpl",
@@ -47,7 +60,7 @@ class TestCodeGeneration:
         assert hasattr(websocket_server_module, 'suggestservice_websocket')
 
     def test_generate_cmdline_client_code(self):
-        test_service = self._create_test_service()
+        test_service = create_test_service()
         working_path = "/home/amund/PycharmProjects/tracerbull"
 
         # need data for where to connect
@@ -64,7 +77,7 @@ class TestCodeGeneration:
         #assert hasattr(websocket_server_module, 'suggestservice_websocket')
 
     def test_generate_html_client_code(self):
-        test_service = self._create_test_service()
+        test_service = create_test_service()
         working_path = "/home/amund/PycharmProjects/tracerbull"
 
           # need data for where to connect
@@ -82,6 +95,7 @@ class TestCodeGeneration:
         for javascript in javascripts:
             if 'function' in javascript.text:
                 program = parser.parse(javascript.text)
+                print javascript.text
                 assert type(program) == pyjsparser.ast.Program
 
         
