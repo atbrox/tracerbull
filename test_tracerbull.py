@@ -20,6 +20,7 @@ import traceback
 # html/javascript parsing
 import bs4
 import pyjsparser
+import os # getcwd
 
 
 # https://bitbucket.org/outcomm/bs4
@@ -53,7 +54,7 @@ class TestStartServices:
         when(tracerbull.BabelShark).create_process(any(),any(),any(),
                                             any(), any(),any()).thenReturn("ws_process")
         services = [create_test_service(), create_test_service()]
-        working_path = "/home/amund/PycharmProjects/tracerbull"
+        working_path = os.getcwd()
 
         tracerbull.BabelShark.start_services(services,
                                              codegen=tracerbull.BabelShark.generate_code,
@@ -71,7 +72,7 @@ class TestCodeGeneration:
 
     def test_generate_server_code(self):
         test_service = create_test_service()
-        working_path = "/home/amund/PycharmProjects/tracerbull"
+        working_path = os.getcwd()
         websocket_server_code = tracerbull.BabelShark.generate_code(test_service,
                                                          "websocket_server_template.tpl",
                                                          loader=tornado.template.Loader(working_path))
@@ -81,7 +82,7 @@ class TestCodeGeneration:
 
     def test_generate_cmdline_client_code(self):
         test_service = create_test_service()
-        working_path = "/home/amund/PycharmProjects/tracerbull"
+        working_path = os.getcwd()
 
         # need data for where to connect
         test_service["wshostname"] = test_service["hostname"]
@@ -98,7 +99,7 @@ class TestCodeGeneration:
 
     def test_generate_html_client_code(self):
         test_service = create_test_service()
-        working_path = "/home/amund/PycharmProjects/tracerbull"
+        working_path = os.getcwd()
 
           # need data for where to connect
         test_service["wshostname"] = test_service["hostname"]
