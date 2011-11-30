@@ -1,8 +1,11 @@
+from multiprocessing import Queue
 from mako import codegen
+import multiprocessing
 from mockito.mockito import when, verify
 from mockito.spying import spy
 import tracerbull
 import tornado
+
 
 import pytest
 import mockito
@@ -33,7 +36,22 @@ def create_test_service():
     return test_service
 
 
+
+
 class TestStartServices:
+    def test_create_process(self):
+        port = 1245
+        queue = spy(Queue())
+        boot_function=tracerbull.BabelShark.start_application_server
+        application = "some app"
+        name = "mytestname"
+        instance_number = 0
+        process_mock = mockito.mock()
+        when(multiprocessing).Process(target=any(),args=any()).thenReturn(process_mock)
+        tracerbull.BabelShark.create_process(port, queue, boot_function,application, name,instance_number,
+                                             processor=multiprocessing)
+        verify(process_mock,times=1).start()
+
     def test_start_services(self):
         when(tracerbull.BabelShark).create_process(any(),any(),any(),
                                             any(), any(),any()).thenReturn("ws_process")

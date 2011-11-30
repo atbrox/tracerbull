@@ -1,4 +1,4 @@
-from tornado import template
+import multiprocessing
 
 __author__ = 'amund'
 
@@ -10,7 +10,10 @@ __author__ = 'amund'
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
+from tornado import template
+
 from multiprocessing import Process, Queue
+import multiprocessing
 import socket
 import os
 import tempfile
@@ -46,8 +49,9 @@ class BabelShark(object):
         pass
 
     @staticmethod
-    def create_process(port, queue, boot_function, application, name, instance_number):
-        p = Process(target=boot_function, args=(queue, port, application, name, instance_number))
+    def create_process(port, queue, boot_function, application, name, instance_number, processor):
+        p = processor.Process(target=boot_function, args=(queue, port, application, name, instance_number))
+        print p
         p.start()
         return p
 
@@ -108,7 +112,7 @@ class BabelShark(object):
             websocket_server_process = forker(0, queue, boot_function,
                 websocket_server_application, service["servicename"], 0)
             print websocket_server_process
-        print "yo"
+
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code
         #websocket_html_client_code = generate_code(service, "websocket_client.tpl")
