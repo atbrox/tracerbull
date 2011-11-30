@@ -6,4 +6,4 @@ from fabric.state import output
 from fabric.utils import abort
 
 def test():
-    local('py.test test_tracerbull.py')
+    local('py.test --cov test_tracerbull.py')

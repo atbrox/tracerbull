@@ -35,9 +35,6 @@ def create_test_service():
                     "num_replicas": 0}
     return test_service
 
-
-
-
 class TestStartServices:
     def test_create_process(self):
         port = 1245
