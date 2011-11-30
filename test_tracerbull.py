@@ -37,6 +37,7 @@ def create_test_service():
     return test_service
 
 class TestStartServices:
+
     def test_create_process(self):
         port = 1245
         queue = spy(Queue())
@@ -45,10 +46,17 @@ class TestStartServices:
         name = "mytestname"
         instance_number = 0
         process_mock = mockito.mock()
+        pid = os.getpid()
+        ppid = os.getppid()
+        info = {"name":name, "instance_number": instance_number, "port":port,
+                "pid":pid, "ppid": ppid }
+        when(process_mock).start().thenReturn(queue.put(info))
         when(multiprocessing).Process(target=any(),args=any()).thenReturn(process_mock)
         tracerbull.BabelShark.create_process(port, queue, boot_function,application, name,instance_number,
                                              processor=multiprocessing)
         verify(process_mock,times=1).start()
+        verify(queue, times=1).put(info)
+        return queue
 
     def test_start_services(self):
         when(tracerbull.BabelShark).create_process(any(),any(),any(),
