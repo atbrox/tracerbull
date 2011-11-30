@@ -21,6 +21,9 @@ import traceback
 import bs4
 import pyjsparser
 import os # getcwd
+import time
+import signal
+import psutil
 
 
 # https://bitbucket.org/outcomm/bs4
@@ -37,6 +40,33 @@ def create_test_service():
     return test_service
 
 class TestStartServices:
+
+    def test_start_services_actual(self):
+        #when(tracerbull.BabelShark).create_process(any(),any(),any(),
+        #                                    any(), any(),any()).thenReturn("ws_process")
+        services = [create_test_service()]
+        working_path = os.getcwd()
+
+        queue = tracerbull.BabelShark.start_services(services,
+                                             codegen=tracerbull.BabelShark.generate_code,
+                                             importcode=tracerbull.BabelShark.import_generated_code,
+                                             forker=tracerbull.BabelShark.create_process,
+                                             boot_function=tracerbull.BabelShark.start_application_server,
+                                             tornadoapp=tornado.web.Application,
+                                             template_path=working_path)
+
+        #verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
+        #                                        any(), any(),any())
+        t0 = time.time()
+        while queue.qsize() == 0 and time.time()-t0 < 10:
+            print "sleeping,"
+            time.sleep(1)
+        assert queue.qsize() == 1
+        process_package = queue.get()
+        assert queue.qsize() == 0
+        assert process_package.has_key("pid")
+        assert int(process_package["pid"]) in psutil.get_pid_list()
+        os.kill(process_package["pid"], signal.SIGKILL)
 
     def test_create_process(self):
         port = 1245
@@ -56,15 +86,14 @@ class TestStartServices:
                                              processor=multiprocessing)
         verify(process_mock,times=1).start()
         verify(queue, times=1).put(info)
-        return queue
-
-    def test_start_services(self):
+        
+    def test_start_services_basic(self):
         when(tracerbull.BabelShark).create_process(any(),any(),any(),
                                             any(), any(),any()).thenReturn("ws_process")
         services = [create_test_service(), create_test_service()]
         working_path = os.getcwd()
 
-        tracerbull.BabelShark.start_services(services,
+        queue = tracerbull.BabelShark.start_services(services,
                                              codegen=tracerbull.BabelShark.generate_code,
                                              importcode=tracerbull.BabelShark.import_generated_code,
                                              forker=tracerbull.BabelShark.create_process,

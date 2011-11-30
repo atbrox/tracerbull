@@ -49,7 +49,8 @@ class BabelShark(object):
         pass
 
     @staticmethod
-    def create_process(port, queue, boot_function, application, name, instance_number, processor):
+    def create_process(port, queue, boot_function, application, name, instance_number, processor=multiprocessing):
+        print "==> create_process:", port, name, instance_number
         p = processor.Process(target=boot_function, args=(queue, port, application, name, instance_number))
         print p
         p.start()
@@ -59,6 +60,7 @@ class BabelShark(object):
     @staticmethod
     # either http server or websocket
     def start_application_server(queue, port, application, name, instance_number):
+        print " ==> start_application_server:", port, name, instance_number
         http_server = tornado.httpserver.HTTPServer(application)
         http_server.listen(port)
         actual_port = port
@@ -70,9 +72,11 @@ class BabelShark(object):
                 break
         pid = os.getpid()
         ppid = os.getppid()
+        print "actual_port = ", actual_port
         info = {"name":name, "instance_number": instance_number, "port":actual_port,
                 "pid":pid, "ppid": ppid }
         queue.put(info)
+        print "queue.size = ", queue.qsize()
         tornado.ioloop.IOLoop.instance().start()
 
     @staticmethod
@@ -112,6 +116,9 @@ class BabelShark(object):
             websocket_server_process = forker(0, queue, boot_function,
                 websocket_server_application, service["servicename"], 0)
             print websocket_server_process
+            print "WSS, ", queue.qsize()
+
+        return queue
 
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code
