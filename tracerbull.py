@@ -1,4 +1,5 @@
 import multiprocessing
+import time
 
 __author__ = 'amund'
 
@@ -21,6 +22,7 @@ import imp
 import imputil
 import sys
 import traceback
+import os.path
 
 # https://github.com/facebook/tornado/blob/master/tornado/netutil.py
 services = [
@@ -74,7 +76,7 @@ class BabelShark(object):
         ppid = os.getppid()
         print "actual_port = ", actual_port
         info = {"name":name, "instance_number": instance_number, "port":actual_port,
-                "pid":pid, "ppid": ppid }
+                "pid":pid, "ppid": ppid, "service":service}
         queue.put(info)
         print "queue.size = ", queue.qsize()
         tornado.ioloop.IOLoop.instance().start()
@@ -119,6 +121,33 @@ class BabelShark(object):
             print "WSS, ", queue.qsize()
 
         return queue
+
+    @staticmethod
+    def create_clients_for_services(queue, output_path="clients"):
+        assert queue is not None
+        last_time = time.time()
+        # wait maximum 10 seconds
+        clients = {}
+        while queue.qsize() == 0 and time.time()-last_time < 10:
+            print "waiting:"
+            time.sleep(1)
+        # note: this only works for one service at a time, need to fix
+        if queue.qsize() > 0:
+            service_package = queue.get()
+            service = service_package["service"]
+            service["wshostname"] = service["hostname"]
+            service["wsport"] = service_package["port"]
+            clients["cmdline"] = BabelShark.generate_code(service, "websocket_cmdline_client.tpl")
+            clients["html"] = BabelShark.generate_code(service, "websocket_client.tpl")
+        return clients
+
+
+
+        
+
+
+            
+        
 
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code

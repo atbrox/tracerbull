@@ -40,9 +40,7 @@ def create_test_service():
     return test_service
 
 class TestIntegration:
-       def test_start_services_actual(self):
-        #when(tracerbull.BabelShark).create_process(any(),any(),any(),
-        #                                    any(), any(),any()).thenReturn("ws_process")
+    def create_test_service_and_return_queue(self):
         services = [create_test_service()]
         working_path = os.getcwd()
 
@@ -53,6 +51,19 @@ class TestIntegration:
                                              boot_function=tracerbull.BabelShark.start_application_server,
                                              tornadoapp=tornado.web.Application,
                                              template_path=working_path)
+        return queue
+
+    def test_start_service_and_create_clients(self):
+        queue = self.create_test_service_and_return_queue()
+        clients = tracerbull.BabelShark.create_clients_for_services(queue)
+        # TODO: kill server somewhere
+        print clients
+        # 
+        assert False
+        
+
+    def test_start_services_actual(self):
+        queue = self.create_test_service_and_return_queue()
 
         #verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
         #                                        any(), any(),any())
