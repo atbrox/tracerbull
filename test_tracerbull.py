@@ -39,8 +39,7 @@ def create_test_service():
                     "num_replicas": 0}
     return test_service
 
-class TestStartServices:
-
+class TestIntegration:
     def test_start_services_actual(self):
         #when(tracerbull.BabelShark).create_process(any(),any(),any(),
         #                                    any(), any(),any()).thenReturn("ws_process")
@@ -68,6 +67,8 @@ class TestStartServices:
         assert int(process_package["pid"]) in psutil.get_pid_list()
         os.kill(process_package["pid"], signal.SIGKILL)
 
+
+class TestStartServices:
     def test_create_process(self):
         port = 1245
         queue = spy(Queue())
@@ -79,7 +80,8 @@ class TestStartServices:
         pid = os.getpid()
         ppid = os.getppid()
         info = {"name":name, "instance_number": instance_number, "port":port,
-                "pid":pid, "ppid": ppid }
+                "pid":pid, "ppid": ppid, "hostname": "box1.atbrox.com",
+                "arguments":{"arg0":"default0", "arg1":"default1"}}
         when(process_mock).start().thenReturn(queue.put(info))
         when(multiprocessing).Process(target=any(),args=any()).thenReturn(process_mock)
         tracerbull.BabelShark.create_process(port, queue, boot_function,application, name,instance_number,
