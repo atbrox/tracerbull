@@ -56,11 +56,20 @@ class TestIntegration:
     def test_start_service_and_create_clients(self):
         queue = self.create_test_service_and_return_queue()
         clients = tracerbull.BabelShark.create_clients_for_services(queue)
+        print clients.keys()
+        assert clients.has_key("cmdline")
+        assert clients.has_key("html")
         # TODO: kill server somewhere
-        print clients
-        # 
+        cmdline_client_code = clients["cmdline"]
+        cmdline_client = tracerbull.BabelShark.import_generated_code(cmdline_client_code)
+        print dir(cmdline_client)
+        argv = [None, '{"yo":"flow"}']
+        result = cmdline_client.websocket_client_main(argv)
+        print "SENDING = ", argv
+        print "RESULT = ", result
         assert False
         
+
 
     def test_start_services_actual(self):
         queue = self.create_test_service_and_return_queue()
