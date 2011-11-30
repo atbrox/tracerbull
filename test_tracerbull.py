@@ -40,7 +40,7 @@ def create_test_service():
     return test_service
 
 class TestIntegration:
-    def test_start_services_actual(self):
+       def test_start_services_actual(self):
         #when(tracerbull.BabelShark).create_process(any(),any(),any(),
         #                                    any(), any(),any()).thenReturn("ws_process")
         services = [create_test_service()]
@@ -85,6 +85,7 @@ class TestStartServices:
         when(process_mock).start().thenReturn(queue.put(info))
         when(multiprocessing).Process(target=any(),args=any()).thenReturn(process_mock)
         tracerbull.BabelShark.create_process(port, queue, boot_function,application, name,instance_number,
+                                             service=None,
                                              processor=multiprocessing)
         verify(process_mock,times=1).start()
         verify(queue, times=1).put(info)
@@ -104,7 +105,7 @@ class TestStartServices:
                                              template_path=working_path)
 
         verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
-                                                any(), any(),any())
+                                                any(), any(),any(), any())
 
 class TestCodeGeneration:
 
