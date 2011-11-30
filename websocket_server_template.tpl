@@ -18,7 +18,7 @@ class {{servicename}}_websocket(tornado.websocket.WebSocketHandler):
       args = json.loads(message)
       args["{{servicename}}_server_pid"] = os.getpid()
       args["{{servicename}}_server_time"] = time.time()
-      args["{{servicename}}_processing_time"] = time.time()-t0
+      args["{{servicename}}_processing_time_milliseconds"] = (time.time()-t0)*1000.0
       print "args = ", args
       self.write_message(json.dumps(args))
     except Exception, e:

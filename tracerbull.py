@@ -24,6 +24,8 @@ import sys
 import traceback
 import os.path
 
+TIME_TO_WAIT_FOR_SERVERS = 5
+
 # https://github.com/facebook/tornado/blob/master/tornado/netutil.py
 services = [
     {"servicename":"suggestservice",
@@ -128,18 +130,27 @@ class BabelShark(object):
         last_time = time.time()
         # wait maximum 10 seconds
         clients = {}
-        while queue.qsize() == 0 and time.time()-last_time < 10:
-            print "waiting:"
-            time.sleep(1)
-        # note: this only works for one service at a time, need to fix
-        if queue.qsize() > 0:
-            service_package = queue.get()
-            service = service_package["service"]
-            service["wshostname"] = service["hostname"]
-            service["wsport"] = service_package["port"]
-            clients["cmdline"] = BabelShark.generate_code(service, "websocket_cmdline_client.tpl")
-            clients["html"] = BabelShark.generate_code(service, "websocket_client.tpl")
-        return clients
+        server_pids = {}
+        while time.time() - last_time < TIME_TO_WAIT_FOR_SERVERS:
+            while queue.qsize() == 0 and time.time()-last_time < TIME_TO_WAIT_FOR_SERVERS:
+                print "waiting for new servers"
+                time.sleep(1)
+            if queue.qsize() > 0:
+                service_package = queue.get()
+                service = service_package["service"]
+                service["wshostname"] = service["hostname"]
+                service["wsport"] = service_package["port"]
+                # TODO: support multiple instances of services
+                clients[service["servicename"]] = {}
+                clients[service["servicename"]]["cmdline"] = BabelShark.generate_code(service, "websocket_cmdline_client.tpl")
+                clients[service["servicename"]]["html"] = BabelShark.generate_code(service, "websocket_client.tpl")
+                server_pids[service_package["pid"]] = service["servicename"]
+                last_time = time.time()
+        print "finished waiting for servers"
+
+        # TODO: create kill file in output_path of server_pids
+        # TODO: create hosts file in output_path of hostname (support localhost mode?)
+        return clients, server_pids
 
 
 

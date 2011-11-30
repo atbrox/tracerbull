@@ -40,8 +40,13 @@ def create_test_service():
     return test_service
 
 class TestIntegration:
+    def kill_servers(self, server_pids):
+        for pid in server_pids:
+            print "killing server on pid %s" % (pid)
+            os.kill(int(pid), signal.SIGKILL)
+            
     def create_test_service_and_return_queue(self):
-        services = [create_test_service()]
+        services = [create_test_service(), create_test_service()]
         working_path = os.getcwd()
 
         queue = tracerbull.BabelShark.start_services(services,
@@ -53,25 +58,28 @@ class TestIntegration:
                                              template_path=working_path)
         return queue
 
-    def test_start_service_and_create_clients(self):
+    def test_start_services_and_create_clients(self):
         queue = self.create_test_service_and_return_queue()
-        clients = tracerbull.BabelShark.create_clients_for_services(queue)
-        print clients.keys()
-        assert clients.has_key("cmdline")
-        assert clients.has_key("html")
-        # TODO: kill server somewhere
-        cmdline_client_code = clients["cmdline"]
-        cmdline_client = tracerbull.BabelShark.import_generated_code(cmdline_client_code)
-        print dir(cmdline_client)
-        argv = [None, '{"yo":"flow"}']
-        result = cmdline_client.websocket_client_main(argv)
-        print "SENDING = ", argv
-        print "RESULT = ", result
-        assert False
-        
 
+        # generate and load client code
+        clients, server_pids = tracerbull.BabelShark.create_clients_for_services(queue)
+        for service in clients:
+            assert clients[service].has_key("cmdline")
+            assert clients[service].has_key("html")
+            cmdline_client_code = clients[service]["cmdline"]
+            cmdline_client = tracerbull.BabelShark.import_generated_code(cmdline_client_code)
 
-    def test_start_services_actual(self):
+            # client communicates with server
+            argv = [None, '{"yo":"flow"}']
+            result = cmdline_client.websocket_client_main(argv)
+            print "SENDING = ", argv
+            print "RESULT = ", result
+            print "SERVER PIDS = ", server_pids
+
+        # kill servers
+        self.kill_servers(server_pids)
+
+    def test_start_services(self):
         queue = self.create_test_service_and_return_queue()
 
         #verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
@@ -80,12 +88,19 @@ class TestIntegration:
         while queue.qsize() == 0 and time.time()-t0 < 10:
             print "sleeping,"
             time.sleep(1)
+        assert queue.qsize() == 2
+        process_package = queue.get()
         assert queue.qsize() == 1
+        assert process_package.has_key("pid")
+        assert int(process_package["pid"]) in psutil.get_pid_list()
+        os.kill(process_package["pid"], signal.SIGKILL)
+
         process_package = queue.get()
         assert queue.qsize() == 0
         assert process_package.has_key("pid")
         assert int(process_package["pid"]) in psutil.get_pid_list()
         os.kill(process_package["pid"], signal.SIGKILL)
+
 
 
 class TestStartServices:
