@@ -56,10 +56,10 @@ class TestIntegration:
                                              boot_function=tracerbull.BabelShark.start_application_server,
                                              tornadoapp=tornado.web.Application,
                                              template_path=working_path)
-        return queue
+        return queue, len(services)
 
     def test_start_services_and_create_clients(self):
-        queue = self.create_test_service_and_return_queue()
+        queue, _ = self.create_test_service_and_return_queue()
 
         # generate and load client code
         clients, server_pids, kill_file = tracerbull.BabelShark.create_clients_for_services(queue)
@@ -80,12 +80,12 @@ class TestIntegration:
         self.kill_servers(server_pids)
 
     def test_start_services(self):
-        queue = self.create_test_service_and_return_queue()
+        queue, expected_num_services = self.create_test_service_and_return_queue()
 
         #verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
         #                                        any(), any(),any())
         t0 = time.time()
-        while queue.qsize() < 2 and time.time()-t0 < 10:
+        while queue.qsize() < expected_num_services and time.time()-t0 < 10:
             print "sleeping,"
             time.sleep(1)
         assert queue.qsize() == 2
