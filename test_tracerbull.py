@@ -62,7 +62,7 @@ class TestIntegration:
         queue = self.create_test_service_and_return_queue()
 
         # generate and load client code
-        clients, server_pids = tracerbull.BabelShark.create_clients_for_services(queue)
+        clients, server_pids, kill_file = tracerbull.BabelShark.create_clients_for_services(queue)
         for service in clients:
             assert clients[service].has_key("cmdline")
             assert clients[service].has_key("html")
@@ -85,7 +85,7 @@ class TestIntegration:
         #verify(tracerbull.BabelShark, times=len(services)).create_process(any(),any(),any(),
         #                                        any(), any(),any())
         t0 = time.time()
-        while queue.qsize() == 0 and time.time()-t0 < 10:
+        while queue.qsize() < 2 and time.time()-t0 < 10:
             print "sleeping,"
             time.sleep(1)
         assert queue.qsize() == 2

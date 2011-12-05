@@ -28,13 +28,13 @@ TIME_TO_WAIT_FOR_SERVERS = 5
 
 # https://github.com/facebook/tornado/blob/master/tornado/netutil.py
 services = [
-    {"servicename":"suggestservice",
-     "arguments":{"arg0":"default0", "arg1":"default1"},
-     "hostname":"box1.atbrox.com",
-     "response":{},
-     "protocols":["websocket"],
-     "num_instances":1,
-     "num_replicas":0}, # add default way of handling, e.g. merge, just respond, conversions etc?
+        {"servicename":"suggestservice",
+         "arguments":{"arg0":"default0", "arg1":"default1"},
+         "hostname":"box1.atbrox.com",
+         "response":{},
+         "protocols":["websocket"],
+         "num_instances":1,
+         "num_replicas":0}, # add default way of handling, e.g. merge, just respond, conversions etc?
 ]
 
 class BabelShark(object):
@@ -47,7 +47,7 @@ class BabelShark(object):
 
         generated_code = loader.load(template_filename).generate(**service)
         return generated_code
-   
+
     @staticmethod
     def generate_host_entries(services):
         pass
@@ -115,10 +115,10 @@ class BabelShark(object):
             websocket_server_module = importcode(websocket_server_code)
             websocket_server_class_name = "%s_websocket" % (service["servicename"])
             websocket_server_application =  tornadoapp([
-                    (r"/", getattr(websocket_server_module, websocket_server_class_name))
-                ])
+                (r"/", getattr(websocket_server_module, websocket_server_class_name))
+            ])
             websocket_server_process = forker(0, queue, boot_function,
-                websocket_server_application, service["servicename"], 0, service)
+                                              websocket_server_application, service["servicename"], 0, service)
             print websocket_server_process
             print "WSS, ", queue.qsize()
 
@@ -131,6 +131,7 @@ class BabelShark(object):
         # wait maximum 10 seconds
         clients = {}
         server_pids = {}
+        kill_file = "#!/bin/bash\n"
         while time.time() - last_time < TIME_TO_WAIT_FOR_SERVERS:
             while queue.qsize() == 0 and time.time()-last_time < TIME_TO_WAIT_FOR_SERVERS:
                 print "waiting for new servers"
@@ -145,20 +146,25 @@ class BabelShark(object):
                 clients[service["servicename"]]["cmdline"] = BabelShark.generate_code(service, "websocket_cmdline_client.tpl")
                 clients[service["servicename"]]["html"] = BabelShark.generate_code(service, "websocket_client.tpl")
                 server_pids[service_package["pid"]] = service["servicename"]
+                kill_file += "kill -9 %d # %s - %s:%d\n" % (service_package["pid"],
+                                                            service["servicename"],
+                                                            service["hostname"],
+                                                            service["wsport"])
+
                 last_time = time.time()
         print "finished waiting for servers"
 
         # TODO: create kill file in output_path of server_pids
         # TODO: create hosts file in output_path of hostname (support localhost mode?)
-        return clients, server_pids
+        return clients, server_pids, kill_file
 
 
 
-        
 
 
-            
-        
+
+
+
 
         # the queue should now contain data about the service
         # need to wait for port numbers for the client code
